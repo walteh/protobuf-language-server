@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/logs"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/walteh/protobuf-language-server/go-lsp/logs"
 )
 
 type sessionKeyType struct{}
@@ -31,6 +31,7 @@ type Session struct {
 	executorLock sync.Mutex
 	writeLock    sync.Mutex
 	cancel       chan struct{}
+	wasi         bool
 }
 
 func newSession(id int, server *Server, conn ReaderWriter) *Session {
@@ -38,6 +39,10 @@ func newSession(id int, server *Server, conn ReaderWriter) *Session {
 	s.executors = make(map[interface{}]*executor)
 	s.cancel = make(chan struct{}, 1)
 	return s
+}
+
+func (s *Session) SetWasi(wasi bool) {
+	s.wasi = wasi
 }
 
 func (s *Session) Start() {
@@ -65,8 +70,10 @@ func (s *Session) handle() {
 	logs.Printf("Request: [%v] [%s], content: [%v]\n", req.ID, req.Method, string(req.Params))
 	err = s.handlerRequest(req)
 	if err != nil {
+		logs.Println("handlerRequest error: ", err)
 		err := s.handlerResponse(req.ID, nil, err)
 		if err != nil {
+			logs.Println("handlerResponse error: ", err)
 			s.handlerError(err)
 		}
 		return
@@ -192,7 +199,7 @@ func (s *Session) cancelJob(id interface{}) {
 	s.removeExecutor(exec)
 }
 
-func (s *Session) execute(mtdInfo MethodInfo, req RequestMessage, args interface{}) {
+func (s *Session) execute(mtdInfo MethodInfo, req RequestMessage, args interface{}, wasi bool) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	ctx = context.WithValue(ctx, sessionKey, s)
@@ -203,7 +210,7 @@ func (s *Session) execute(mtdInfo MethodInfo, req RequestMessage, args interface
 	if req.ID != nil {
 		s.registerExecutor(exec)
 	}
-	go func() {
+	wrk := func() {
 		defer s.removeExecutor(exec)
 		resp, err := mtdInfo.Handler(ctx, args)
 		select {
@@ -218,7 +225,13 @@ func (s *Session) execute(mtdInfo MethodInfo, req RequestMessage, args interface
 		if err != nil {
 			s.handlerError(err)
 		}
-	}()
+	}
+
+	if !wasi {
+		go wrk()
+	} else {
+		wrk()
+	}
 }
 
 func (s *Session) handlerRequest(req RequestMessage) error {
@@ -232,7 +245,8 @@ func (s *Session) handlerRequest(req RequestMessage) error {
 	if err != nil {
 		return ParseError
 	}
-	s.execute(mtdInfo, req, reqArgs)
+	logs.Printf("execute request: [%v] [%s]\n", req.ID, req.Method)
+	s.execute(mtdInfo, req, reqArgs, s.wasi)
 	return nil
 }
 

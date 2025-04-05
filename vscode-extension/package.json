@@ -2,7 +2,7 @@
   "name": "protobuf-language-server",
   "displayName": "protobuf-language-server",
   "description": "A language server implementation for Google Protocol Buffers",
-  "repository": "https://github.com/lasorda/protobuf-language-server",
+  "repository": "https://github.com/walteh/protobuf-language-server",
   "publisher": "panzhihao",
   "version": "0.0.8",
   "engines": {

@@ -16,6 +16,7 @@ type Server struct {
 	nowId       int
 	methods     map[string]MethodInfo
 	sessionLock sync.Mutex
+	wasi        bool
 }
 
 func NewServer() *Server {
@@ -27,6 +28,10 @@ func NewServer() *Server {
 	s.RegisterMethod(CancelRequest())
 
 	return s
+}
+
+func (s *Server) SetWasi(wasi bool) {
+	s.wasi = wasi
 }
 
 func (s *Server) RegisterMethod(m MethodInfo) {
@@ -51,6 +56,7 @@ func (s *Server) newSession(conn ReaderWriter) *Session {
 	s.nowId += 1
 	session := newSession(id, s, conn)
 	s.session[id] = session
+	session.SetWasi(s.wasi)
 	return session
 }
 

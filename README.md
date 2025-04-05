@@ -1,6 +1,13 @@
 
 # protobuf-language-server
 
+> [!CAUTION]
+> This project is an experiment in building a golang language server in wasi (i.e. pure go in wasm without syscall/js).
+>
+> It is not production ready and should not be relied upon for anything serious.
+>
+> Please use the the upstream [vscode-extension](https://github.com/lasorda/protobuf-language-server) by [lasorda](https://github.com/lasorda) for general use.
+
 A language server implementation for Google Protocol Buffers
 
 I created this tool primarily to streamline my own workflow. While some implementations might not be optimal and the features may feel incomplete, it serves my needs well enough as it is. That said, if you've got a better solution in mind, I'd be happy to switch to yours.
@@ -11,7 +18,7 @@ Build binary
 ```sh
 go clean -modcache
 # insatll to `go env GOPATH`
-go install github.com/lasorda/protobuf-language-server@latest
+go install github.com/walteh/protobuf-language-server@latest
 ```
 
 Add it to your PATH

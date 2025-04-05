@@ -1,0 +1,80 @@
+{
+  "name": "protobuf-language-server",
+  "displayName": "protobuf-language-server",
+  "description": "A language server implementation for Google Protocol Buffers",
+  "repository": "https://github.com/walteh/protobuf-language-server",
+  "publisher": "walteh",
+  "version": "0.0.9",
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+      "Programming Languages"
+  ],
+  "activationEvents": [
+      "onLanguage:proto"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+      "languages": [
+          {
+              "id": "proto",
+              "extensions": [
+                  ".proto"
+              ],
+              "aliases": [
+                  "Protocol Buffers"
+              ]
+          }
+      ],
+      "grammars": [
+          {
+              "language": "proto",
+              "scopeName": "source.proto",
+              "path": "./syntaxes/proto.tmLanguage"
+          }
+      ],
+      "commands": []
+  },
+  
+  "scripts": {
+      "vscode:prepublish": "yarn run compile",
+      "compile": "tsc -p ./",
+      "pretest": "yarn run compile && yarn run lint",
+      "lint": "eslint src --ext ts",
+      "test": "node ./out/test/runTest.js",
+      "build": "bun build ./src/extension.ts --outdir ./out --target node --external vscode --format cjs",
+      "watch": "bun build ./src/extension.ts --outdir ./out --target node --watch --external vscode --format cjs",
+      "package": "bunx vsce pack --no-update-package-json --no-git-tag-version --no-dependencies $(git describe --tags | sed 's|v||g')",
+      "publish": "bunx vsce publish"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/eslint-plugin-security": "^3.0.0",
+    "@types/node": "^16.18.34",
+    "@types/vscode": "^1.96.0",
+    "@typescript-eslint/eslint-plugin": "^8.23.0",
+    "@typescript-eslint/parser": "^8.23.0",
+    "bun-types": "latest",
+    "eslint": "^9.20.0",
+    "eslint-import-resolver-typescript": "^3.7.0",
+    "eslint-plugin-functional": "^8.0.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "jiti": "^2.4.2",
+    "prettier": "^3.4.2",
+    "typescript-eslint": "^8.23.0",
+    "pratica": "^2.3.0",
+    "@vscode/vsce": "^3.2.2"
+},
+"trustedDependencies": [
+    "bun-types"
+],
+"dependencies": {
+    "@vscode/wasm-wasi": "^1.0.1",
+    "vscode-languageclient": "^9.0.1"
+}
+}

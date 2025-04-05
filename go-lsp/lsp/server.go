@@ -5,8 +5,8 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/jsonrpc"
-	"github.com/lasorda/protobuf-language-server/go-lsp/logs"
+	"github.com/walteh/protobuf-language-server/go-lsp/jsonrpc"
+	"github.com/walteh/protobuf-language-server/go-lsp/logs"
 )
 
 type Server struct {
@@ -19,6 +19,10 @@ func NewServer(opt *Options) *Server {
 	s.Opt = *opt
 	s.rpcServer = jsonrpc.NewServer()
 	return s
+}
+
+func (s *Server) SetWasi(wasi bool) {
+	s.rpcServer.SetWasi(wasi)
 }
 
 func (s *Server) Run() {

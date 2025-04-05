@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/logs"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
+	"github.com/walteh/protobuf-language-server/go-lsp/logs"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 func strPtr(str string) *string {

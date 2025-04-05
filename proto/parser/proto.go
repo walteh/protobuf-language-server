@@ -3,9 +3,9 @@ package parser
 import (
 	"sync"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/logs"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
 	protobuf "github.com/emicklei/proto"
+	"github.com/walteh/protobuf-language-server/go-lsp/logs"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 // Proto is a registry for protobuf proto.

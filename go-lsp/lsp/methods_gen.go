@@ -4,8 +4,8 @@ package lsp
 import (
 	"context"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/jsonrpc"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
+	"github.com/walteh/protobuf-language-server/go-lsp/jsonrpc"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 type Methods struct {

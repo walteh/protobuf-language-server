@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 
-	"github.com/lasorda/protobuf-language-server/components"
-	"github.com/lasorda/protobuf-language-server/proto/view"
+	"github.com/walteh/protobuf-language-server/components"
+	"github.com/walteh/protobuf-language-server/proto/view"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/logs"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
+	"github.com/walteh/protobuf-language-server/go-lsp/logs"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 var (

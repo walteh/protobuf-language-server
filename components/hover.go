@@ -6,11 +6,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/lasorda/protobuf-language-server/proto/parser"
-	"github.com/lasorda/protobuf-language-server/proto/view"
+	"github.com/walteh/protobuf-language-server/proto/parser"
+	"github.com/walteh/protobuf-language-server/proto/view"
 
 	"github.com/emicklei/proto"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 var hoverTmpl *template.Template

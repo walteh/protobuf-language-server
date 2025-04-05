@@ -3,8 +3,8 @@ package parser
 import (
 	"io"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
 	protobuf "github.com/emicklei/proto"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 // ParseProtos parses protobuf files from filenames and return parser.ProtoSet.

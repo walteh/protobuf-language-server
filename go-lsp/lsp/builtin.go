@@ -3,7 +3,7 @@ package lsp
 import (
 	"context"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 func (m *Methods) builtinInitialize(ctx context.Context, req *defines.InitializeParams) (defines.InitializeResult, error) {
@@ -119,38 +119,38 @@ func (m *Methods) builtinInitialize(ctx context.Context, req *defines.Initialize
 		resp.Capabilities.RenameProvider = true
 	}
 	if m.Opt.FoldingRangeProvider != nil {
-        resp.Capabilities.FoldingRangeProvider = m.Opt.FoldingRangeProvider
-    } else if m.onFoldingRanges != nil {
-        resp.Capabilities.FoldingRangeProvider = true
-    }
+		resp.Capabilities.FoldingRangeProvider = m.Opt.FoldingRangeProvider
+	} else if m.onFoldingRanges != nil {
+		resp.Capabilities.FoldingRangeProvider = true
+	}
 	if m.Opt.SelectionRangeProvider != nil {
-        resp.Capabilities.SelectionRangeProvider = m.Opt.SelectionRangeProvider
-    } else if m.onSelectionRanges != nil {
-        resp.Capabilities.SelectionRangeProvider = true
-    }
+		resp.Capabilities.SelectionRangeProvider = m.Opt.SelectionRangeProvider
+	} else if m.onSelectionRanges != nil {
+		resp.Capabilities.SelectionRangeProvider = true
+	}
 	if m.Opt.ExecuteCommandProvider != nil {
-        resp.Capabilities.ExecuteCommandProvider = m.Opt.ExecuteCommandProvider
-    } else if m.onExecuteCommand != nil {
+		resp.Capabilities.ExecuteCommandProvider = m.Opt.ExecuteCommandProvider
+	} else if m.onExecuteCommand != nil {
 		// TODO
-        resp.Capabilities.ExecuteCommandProvider = &defines.ExecuteCommandOptions{}
-    }
+		resp.Capabilities.ExecuteCommandProvider = &defines.ExecuteCommandOptions{}
+	}
 	if m.Opt.DocumentLinkProvider != nil {
-        resp.Capabilities.DocumentLinkProvider = m.Opt.DocumentLinkProvider
-    } else if m.onDocumentLinks != nil {
+		resp.Capabilities.DocumentLinkProvider = m.Opt.DocumentLinkProvider
+	} else if m.onDocumentLinks != nil {
 		// TODO
-        resp.Capabilities.DocumentLinkProvider = &defines.DocumentLinkOptions{}
-    }
+		resp.Capabilities.DocumentLinkProvider = &defines.DocumentLinkOptions{}
+	}
 	if m.Opt.SemanticTokensProvider != nil {
-        resp.Capabilities.SemanticTokensProvider = m.Opt.SemanticTokensProvider
-    }
+		resp.Capabilities.SemanticTokensProvider = m.Opt.SemanticTokensProvider
+	}
 
 	if m.Opt.MonikerProvider != nil {
-        resp.Capabilities.MonikerProvider = m.Opt.MonikerProvider
-    }
+		resp.Capabilities.MonikerProvider = m.Opt.MonikerProvider
+	}
 
 	if m.Opt.CallHierarchyProvider != nil {
-        resp.Capabilities.CallHierarchyProvider = m.Opt.CallHierarchyProvider
-    }
+		resp.Capabilities.CallHierarchyProvider = m.Opt.CallHierarchyProvider
+	}
 
 	//}
 	//if m.onMon != nil{

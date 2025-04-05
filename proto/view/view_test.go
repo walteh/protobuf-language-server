@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
 	"github.com/stretchr/testify/require"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 func Test_view_GetDocumentUriFromImportPath(t *testing.T) {

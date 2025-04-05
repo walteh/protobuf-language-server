@@ -2,10 +2,11 @@ package components
 
 import (
 	"context"
-	"github.com/lasorda/protobuf-language-server/proto/view"
 
-	"github.com/lasorda/protobuf-language-server/go-lsp/logs"
-	"github.com/lasorda/protobuf-language-server/go-lsp/lsp/defines"
+	"github.com/walteh/protobuf-language-server/proto/view"
+
+	"github.com/walteh/protobuf-language-server/go-lsp/logs"
+	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 )
 
 func ProvideDocumentSymbol(ctx context.Context, req *defines.DocumentSymbolParams) (result *[]defines.DocumentSymbol, err error) {

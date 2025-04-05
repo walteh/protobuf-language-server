@@ -17,6 +17,7 @@ type Server struct {
 func NewServer(opt *Options) *Server {
 	s := &Server{}
 	s.Opt = *opt
+
 	s.rpcServer = jsonrpc.NewServer()
 	return s
 }

@@ -2,12 +2,14 @@ package lsp
 
 import (
 	"fmt"
+	"go/format"
 	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
+	"golang.org/x/tools/imports"
 )
 
 type typ_ struct {
@@ -119,7 +121,20 @@ func generateOneNoResp(name, regName, args, error, code string, withBuiltin bool
 
 func TestMethodsGen(t *testing.T) {
 	res := generate(methods)
-	err := ioutil.WriteFile("methods_gen.go", []byte(res), 0777)
+
+	// run go fmt
+	formatted, err := format.Source([]byte(res))
+	if err != nil {
+		panic(err)
+	}
+
+	// run go imports
+	imp, err := imports.Process("methods_gen.go", formatted, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ioutil.WriteFile("methods_gen.go", imp, 0777)
 	if err != nil {
 		panic(err)
 	}

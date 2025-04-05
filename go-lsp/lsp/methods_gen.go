@@ -51,6 +51,7 @@ type Methods struct {
 	onColorPresentation                        func(ctx context.Context, req *defines.ColorPresentationParams) (*[]defines.ColorPresentation, error)
 	onFoldingRanges                            func(ctx context.Context, req *defines.FoldingRangeParams) (*[]defines.FoldingRange, error)
 	onSelectionRanges                          func(ctx context.Context, req *defines.SelectionRangeParams) (*[]defines.SelectionRange, error)
+	onSemanticTokens                           func(ctx context.Context, req *defines.SemanticTokensParams) (*defines.SemanticTokens, error)
 }
 
 func (m *Methods) OnInitialize(f func(ctx context.Context, req *defines.InitializeParams) (result *defines.InitializeResult, err *defines.InitializeError)) {
@@ -186,7 +187,7 @@ func (m *Methods) didChangeConfigurationMethodInfo() *jsonrpc.MethodInfo {
 		return nil
 	}
 	return &jsonrpc.MethodInfo{
-		Name: "workspace/didChangeConfiguration",
+		Name: "didChangeConfiguration",
 		NewRequest: func() interface{} {
 			return &defines.DidChangeConfigurationParams{}
 		},
@@ -242,7 +243,7 @@ func (m *Methods) didOpenTextDocumentMethodInfo() *jsonrpc.MethodInfo {
 		return nil
 	}
 	return &jsonrpc.MethodInfo{
-		Name: "textDocument/didOpen",
+		Name: "didOpenTextDocument",
 		NewRequest: func() interface{} {
 			return &defines.DidOpenTextDocumentParams{}
 		},
@@ -270,7 +271,7 @@ func (m *Methods) didChangeTextDocumentMethodInfo() *jsonrpc.MethodInfo {
 		return nil
 	}
 	return &jsonrpc.MethodInfo{
-		Name: "textDocument/didChange",
+		Name: "didChangeTextDocument",
 		NewRequest: func() interface{} {
 			return &defines.DidChangeTextDocumentParams{}
 		},
@@ -298,7 +299,7 @@ func (m *Methods) didCloseTextDocumentMethodInfo() *jsonrpc.MethodInfo {
 		return nil
 	}
 	return &jsonrpc.MethodInfo{
-		Name: "textDocument/didClose",
+		Name: "didCloseTextDocument",
 		NewRequest: func() interface{} {
 			return &defines.DidCloseTextDocumentParams{}
 		},
@@ -354,7 +355,7 @@ func (m *Methods) didSaveTextDocumentMethodInfo() *jsonrpc.MethodInfo {
 		return nil
 	}
 	return &jsonrpc.MethodInfo{
-		Name: "textDocument/didSave",
+		Name: "didSaveTextDocument",
 		NewRequest: func() interface{} {
 			return &defines.DidSaveTextDocumentParams{}
 		},
@@ -1202,6 +1203,34 @@ func (m *Methods) selectionRangesMethodInfo() *jsonrpc.MethodInfo {
 	}
 }
 
+func (m *Methods) OnSemanticTokens(f func(ctx context.Context, req *defines.SemanticTokensParams) (result *defines.SemanticTokens, err error)) {
+	m.onSemanticTokens = f
+}
+
+func (m *Methods) semanticTokens(ctx context.Context, req interface{}) (interface{}, error) {
+	params := req.(*defines.SemanticTokensParams)
+	if m.onSemanticTokens != nil {
+		res, err := m.onSemanticTokens(ctx, params)
+		e := wrapErrorToRespError(err, 0)
+		return res, e
+	}
+	return nil, nil
+}
+
+func (m *Methods) semanticTokensMethodInfo() *jsonrpc.MethodInfo {
+
+	if m.onSemanticTokens == nil {
+		return nil
+	}
+	return &jsonrpc.MethodInfo{
+		Name: "textDocument/semanticTokens/full",
+		NewRequest: func() interface{} {
+			return &defines.SemanticTokensParams{}
+		},
+		Handler: m.semanticTokens,
+	}
+}
+
 func (m *Methods) GetMethods() []*jsonrpc.MethodInfo {
 	return []*jsonrpc.MethodInfo{
 		m.initializeMethodInfo(),
@@ -1245,5 +1274,6 @@ func (m *Methods) GetMethods() []*jsonrpc.MethodInfo {
 		m.colorPresentationMethodInfo(),
 		m.foldingRangesMethodInfo(),
 		m.selectionRangesMethodInfo(),
+		m.semanticTokensMethodInfo(),
 	}
 }

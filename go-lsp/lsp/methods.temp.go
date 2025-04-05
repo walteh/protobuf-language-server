@@ -247,4 +247,11 @@ var methods = []method{
 		Result:        []defines.SelectionRange{},
 		ProgressToken: []defines.SelectionRange{},
 	},
+	{
+		Name:          "SemanticTokens",
+		RegisterName:  "textDocument/semanticTokens/full",
+		Args:          defines.SemanticTokensParams{},
+		Result:        defines.SemanticTokens{},
+		ProgressToken: defines.SemanticTokens{},
+	},
 }

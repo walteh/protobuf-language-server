@@ -31,6 +31,7 @@ func main() {
 		CompletionProvider: &defines.CompletionOptions{
 			TriggerCharacters: &[]string{"."},
 		},
+		SemanticTokensProvider: components.GetSemanticTokensOptions(),
 	}
 	if *address != "" {
 		config.Address = *address
@@ -46,5 +47,6 @@ func main() {
 	server.OnCompletion(components.Completion)
 	server.OnHover(components.Hover)
 	server.OnDocumentRangeFormatting(components.FormatRange)
+	server.OnSemanticTokens(components.ProvideSemanticTokens)
 	server.Run()
 }

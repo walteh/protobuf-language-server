@@ -9,6 +9,7 @@ require (
 	github.com/walteh/retab/v2 v2.3.2
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/uri v0.3.0
+	golang.org/x/tools v0.22.0
 )
 
 require (

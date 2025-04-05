@@ -5,7 +5,9 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 
+	"github.com/emicklei/proto"
 	protobuf "github.com/emicklei/proto"
 	"github.com/walteh/protobuf-language-server/go-lsp/lsp/defines"
 	"github.com/walteh/protobuf-language-server/proto/parser"
@@ -103,7 +105,7 @@ func ProvideSemanticTokens(ctx context.Context, params *defines.SemanticTokensPa
 	// Process imports
 	processImports(proto, &tokens)
 
-	// Process messages
+	// Process messages (including nested ones)
 	processMessages(proto, &tokens)
 
 	// Process enums
@@ -216,53 +218,109 @@ func processImports(proto parser.Proto, tokens *[]Token) {
 // processMessages handles message declarations and their fields
 func processMessages(proto parser.Proto, tokens *[]Token) {
 	for _, msg := range proto.Messages() {
-		pos := msg.Protobuf().Position
+		processMessage(msg, tokens, proto)
+	}
+}
 
-		// Message keyword
+// processMessage recursively processes a message and its nested messages
+func processMessage(msg parser.Message, tokens *[]Token, proto parser.Proto) {
+	pos := msg.Protobuf().Position
+
+	// Message keyword
+	*tokens = append(*tokens, Token{
+		Line:          pos.Line - 1,
+		StartChar:     pos.Column - 1,
+		Length:        7,  // "message"
+		TokenType:     13, // keyword
+		TokenModifier: 0,
+	})
+
+	// Message name
+	nameStartChar := pos.Column + 7 // After "message "
+	*tokens = append(*tokens, Token{
+		Line:          pos.Line - 1,
+		StartChar:     nameStartChar,
+		Length:        len(msg.Protobuf().Name),
+		TokenType:     2, // class
+		TokenModifier: 0,
+	})
+
+	// Process message fields
+	for _, field := range msg.Fields() {
+		fpos := field.ProtoField.Position
+
+		// Field type - check if it's a reference to another type or enum
+		fieldType := field.ProtoField.Type
+		fieldTypeToken := 1 // Default to type
+
+		// Check if this type refers to a message or enum type
+		if !isBuiltInType(fieldType) {
+			if _, ok := proto.GetMessageByName(fieldType); ok {
+				fieldTypeToken = 2 // class
+			} else if _, ok := proto.GetEnumByName(fieldType); ok {
+				fieldTypeToken = 3 // enum
+			} else if strings.Contains(fieldType, ".") {
+				// This could be a fully qualified message or enum type
+				fieldTypeToken = 0 // namespace for the package part
+			}
+		}
+
 		*tokens = append(*tokens, Token{
-			Line:          pos.Line - 1,
-			StartChar:     pos.Column - 1,
-			Length:        7,  // "message"
-			TokenType:     13, // keyword
+			Line:          fpos.Line - 1,
+			StartChar:     fpos.Column - 1,
+			Length:        len(fieldType),
+			TokenType:     fieldTypeToken,
 			TokenModifier: 0,
 		})
 
-		// Message name
-		nameStartChar := pos.Column + 7 // After "message "
+		// Field name
+		nameStartChar := fpos.Column - 1 + len(field.ProtoField.Type) + 1 // After type and space
 		*tokens = append(*tokens, Token{
-			Line:          pos.Line - 1,
+			Line:          fpos.Line - 1,
 			StartChar:     nameStartChar,
-			Length:        len(msg.Protobuf().Name),
-			TokenType:     2, // class
-			TokenModifier: 0,
+			Length:        len(field.ProtoField.Name),
+			TokenType:     7, // parameter
+			TokenModifier: 1, // definition
 		})
 
-		// Process message fields
-		for _, field := range msg.Fields() {
-			fpos := field.ProtoField.Position
+		// Field options
+		for _, opt := range field.ProtoField.Options {
+			optPos := opt.Position
 
-			// Field type
-			*tokens = append(*tokens, Token{
-				Line:          fpos.Line - 1,
-				StartChar:     fpos.Column - 1,
-				Length:        len(field.ProtoField.Type),
-				TokenType:     1, // type
-				TokenModifier: 0,
-			})
+			// Check if option name contains a namespace
+			if strings.Contains(opt.Name, ".") {
+				parts := strings.Split(opt.Name, ".")
+				namespace := strings.Join(parts[:len(parts)-1], ".")
+				propertyName := parts[len(parts)-1]
 
-			// Field name
-			nameStartChar := fpos.Column - 1 + len(field.ProtoField.Type) + 1 // After type and space
-			*tokens = append(*tokens, Token{
-				Line:          fpos.Line - 1,
-				StartChar:     nameStartChar,
-				Length:        len(field.ProtoField.Name),
-				TokenType:     7, // parameter
-				TokenModifier: 1, // definition
-			})
+				// Namespace part
+				*tokens = append(*tokens, Token{
+					Line:          optPos.Line - 1,
+					StartChar:     optPos.Column - 1,
+					Length:        len(namespace),
+					TokenType:     0, // namespace
+					TokenModifier: 0,
+				})
 
-			// Field options
-			for _, opt := range field.ProtoField.Options {
-				optPos := opt.Position
+				// Dot operator
+				*tokens = append(*tokens, Token{
+					Line:          optPos.Line - 1,
+					StartChar:     optPos.Column - 1 + len(namespace),
+					Length:        1,  // "."
+					TokenType:     16, // operator
+					TokenModifier: 0,
+				})
+
+				// Property name
+				*tokens = append(*tokens, Token{
+					Line:          optPos.Line - 1,
+					StartChar:     optPos.Column - 1 + len(namespace) + 1,
+					Length:        len(propertyName),
+					TokenType:     9, // property
+					TokenModifier: 0,
+				})
+			} else {
+				// Regular option without namespace
 				*tokens = append(*tokens, Token{
 					Line:          optPos.Line - 1,
 					StartChar:     optPos.Column - 1,
@@ -270,23 +328,228 @@ func processMessages(proto parser.Proto, tokens *[]Token) {
 					TokenType:     9, // property
 					TokenModifier: 0,
 				})
+			}
+
+			// Option value
+			valuePos := optPos.Column - 1 + len(opt.Name) + 1 // After name and '='
+			valueLength := 1                                  // Minimum length
+			valueType := 14                                   // Default to string type
+
+			if !isNil(opt.Constant) {
+				if opt.Constant.Source != "" {
+					valueLength = len(opt.Constant.Source)
+
+					// Check if the value represents a type reference
+					if strings.Contains(opt.Constant.Source, ".") && !strings.HasPrefix(opt.Constant.Source, "\"") {
+						valueType = 0 // namespace
+					} else if opt.Constant.IsString {
+						valueType = 14 // string
+					} else {
+						// Try to determine if it's a number
+						_, err := strconv.ParseInt(opt.Constant.Source, 10, 64)
+						if err == nil {
+							valueType = 15 // number
+						}
+					}
+				}
+			}
+
+			*tokens = append(*tokens, Token{
+				Line:          optPos.Line - 1,
+				StartChar:     valuePos,
+				Length:        valueLength,
+				TokenType:     valueType,
+				TokenModifier: 0,
+			})
+		}
+	}
+
+	// Process nested messages recursively
+	if nestedMessages := msg.NestedMessages(); len(nestedMessages) > 0 {
+		for _, nm := range nestedMessages {
+			processMessage(nm, tokens, proto)
+		}
+	} else {
+		// Fallback for direct access to elements when NestedMessages() isn't populated
+		for _, element := range msg.Protobuf().Elements {
+			if nested, ok := element.(*protobuf.Message); ok {
+				// For nested messages we'll just process them directly without trying to wrap them
+				processNestedMessageDirectly(nested, tokens, proto)
+			}
+		}
+	}
+}
+
+// processNestedMessageDirectly processes a nested message without wrapping it
+func processNestedMessageDirectly(msg *protobuf.Message, tokens *[]Token, proto parser.Proto) {
+	pos := msg.Position
+
+	// Message keyword
+	*tokens = append(*tokens, Token{
+		Line:          pos.Line - 1,
+		StartChar:     pos.Column - 1,
+		Length:        7,  // "message"
+		TokenType:     13, // keyword
+		TokenModifier: 0,
+	})
+
+	// Message name
+	nameStartChar := pos.Column + 7 // After "message "
+	*tokens = append(*tokens, Token{
+		Line:          pos.Line - 1,
+		StartChar:     nameStartChar,
+		Length:        len(msg.Name),
+		TokenType:     2, // class
+		TokenModifier: 0,
+	})
+
+	// Process fields in the nested message
+	for _, element := range msg.Elements {
+		if field, ok := element.(*protobuf.NormalField); ok {
+			fpos := field.Position
+
+			// Field type
+			fieldType := field.Type
+			fieldTypeToken := 1 // Default to type
+
+			// Check if this type refers to a message or enum type
+			if !isBuiltInType(fieldType) {
+				if _, ok := proto.GetMessageByName(fieldType); ok {
+					fieldTypeToken = 2 // class
+				} else if _, ok := proto.GetEnumByName(fieldType); ok {
+					fieldTypeToken = 3 // enum
+				} else if strings.Contains(fieldType, ".") {
+					// This could be a fully qualified message or enum type
+					fieldTypeToken = 0 // namespace for the package part
+				}
+			}
+
+			*tokens = append(*tokens, Token{
+				Line:          fpos.Line - 1,
+				StartChar:     fpos.Column - 1,
+				Length:        len(fieldType),
+				TokenType:     fieldTypeToken,
+				TokenModifier: 0,
+			})
+
+			// Field name
+			nameStartChar := fpos.Column - 1 + len(field.Type) + 1 // After type and space
+			*tokens = append(*tokens, Token{
+				Line:          fpos.Line - 1,
+				StartChar:     nameStartChar,
+				Length:        len(field.Name),
+				TokenType:     7, // parameter
+				TokenModifier: 1, // definition
+			})
+
+			// Field options
+			for _, opt := range field.Options {
+				optPos := opt.Position
+
+				// Check if option name contains a namespace
+				if strings.Contains(opt.Name, ".") {
+					parts := strings.Split(opt.Name, ".")
+					namespace := strings.Join(parts[:len(parts)-1], ".")
+					propertyName := parts[len(parts)-1]
+
+					// Namespace part
+					*tokens = append(*tokens, Token{
+						Line:          optPos.Line - 1,
+						StartChar:     optPos.Column - 1,
+						Length:        len(namespace),
+						TokenType:     0, // namespace
+						TokenModifier: 0,
+					})
+
+					// Dot operator
+					*tokens = append(*tokens, Token{
+						Line:          optPos.Line - 1,
+						StartChar:     optPos.Column - 1 + len(namespace),
+						Length:        1,  // "."
+						TokenType:     16, // operator
+						TokenModifier: 0,
+					})
+
+					// Property name
+					*tokens = append(*tokens, Token{
+						Line:          optPos.Line - 1,
+						StartChar:     optPos.Column - 1 + len(namespace) + 1,
+						Length:        len(propertyName),
+						TokenType:     9, // property
+						TokenModifier: 0,
+					})
+				} else {
+					// Regular option without namespace
+					*tokens = append(*tokens, Token{
+						Line:          optPos.Line - 1,
+						StartChar:     optPos.Column - 1,
+						Length:        len(opt.Name),
+						TokenType:     9, // property
+						TokenModifier: 0,
+					})
+				}
 
 				// Option value
 				valuePos := optPos.Column - 1 + len(opt.Name) + 1 // After name and '='
 				valueLength := 1                                  // Minimum length
-				if !isNil(opt.Constant) && opt.Constant.Source != "" {
-					valueLength = len(opt.Constant.Source)
+				valueType := 14                                   // Default to string type
+
+				if !isNil(opt.Constant) {
+					if opt.Constant.Source != "" {
+						valueLength = len(opt.Constant.Source)
+
+						// Check if the value represents a type reference
+						if strings.Contains(opt.Constant.Source, ".") && !strings.HasPrefix(opt.Constant.Source, "\"") {
+							valueType = 0 // namespace
+						} else if opt.Constant.IsString {
+							valueType = 14 // string
+						} else {
+							// Try to determine if it's a number
+							_, err := strconv.ParseInt(opt.Constant.Source, 10, 64)
+							if err == nil {
+								valueType = 15 // number
+							}
+						}
+					}
 				}
+
 				*tokens = append(*tokens, Token{
 					Line:          optPos.Line - 1,
 					StartChar:     valuePos,
 					Length:        valueLength,
-					TokenType:     14, // string or number depending on type
+					TokenType:     valueType,
 					TokenModifier: 0,
 				})
 			}
 		}
+
+		// Recursively process nested messages in the nested message
+		if nestedMessage, ok := element.(*protobuf.Message); ok {
+			processNestedMessageDirectly(nestedMessage, tokens, proto)
+		}
 	}
+}
+
+// isBuiltInType checks if the type is a protobuf built-in type
+func isBuiltInType(typeName string) bool {
+	builtInTypes := map[string]bool{
+		"double":   true,
+		"float":    true,
+		"int32":    true,
+		"int64":    true,
+		"uint32":   true,
+		"uint64":   true,
+		"sint32":   true,
+		"sint64":   true,
+		"fixed32":  true,
+		"fixed64":  true,
+		"sfixed32": true,
+		"sfixed64": true,
+		"bool":     true,
+		"string":   true,
+		"bytes":    true,
+	}
+	return builtInTypes[typeName]
 }
 
 // processEnums handles enum declarations and their values
@@ -335,9 +598,107 @@ func processEnums(proto parser.Proto, tokens *[]Token) {
 					TokenType:     15, // number
 					TokenModifier: 0,
 				})
+
+				// Handle enum field options if present
+				if len(field.Elements) > 0 {
+					// Find position of opening bracket for options
+					optStartPos := valueStartChar + len(valueStr) + 1 // After the value and a space
+
+					// '[' character
+					*tokens = append(*tokens, Token{
+						Line:          field.Position.Line - 1,
+						StartChar:     optStartPos,
+						Length:        1,
+						TokenType:     16, // operator
+						TokenModifier: 0,
+					})
+
+					for i, optz := range field.Elements {
+						if opt, ok := optz.(*protobuf.Option); ok {
+							optPos := optStartPos + 1 // After '['
+							if i > 0 {
+								optPos += 2 // After ', '
+							}
+
+							// Check if option name contains a namespace
+							if strings.Contains(opt.Name, ".") {
+								parts := strings.Split(opt.Name, ".")
+								namespace := strings.Join(parts[:len(parts)-1], ".")
+								propertyName := parts[len(parts)-1]
+
+								// Namespace part
+								*tokens = append(*tokens, Token{
+									Line:          field.Position.Line - 1,
+									StartChar:     optPos,
+									Length:        len(namespace),
+									TokenType:     0, // namespace
+									TokenModifier: 0,
+								})
+
+								// Dot operator
+								*tokens = append(*tokens, Token{
+									Line:          field.Position.Line - 1,
+									StartChar:     optPos + len(namespace),
+									Length:        1,  // "."
+									TokenType:     16, // operator
+									TokenModifier: 0,
+								})
+
+								// Property name
+								*tokens = append(*tokens, Token{
+									Line:          field.Position.Line - 1,
+									StartChar:     optPos + len(namespace) + 1,
+									Length:        len(propertyName),
+									TokenType:     9, // property
+									TokenModifier: 0,
+								})
+
+								optPos += len(opt.Name)
+							} else {
+								// Regular option without namespace
+								*tokens = append(*tokens, Token{
+									Line:          field.Position.Line - 1,
+									StartChar:     optPos,
+									Length:        len(opt.Name),
+									TokenType:     9, // property
+									TokenModifier: 0,
+								})
+
+								optPos += len(opt.Name)
+							}
+						}
+					}
+
+					// ']' character at the end of options
+					optEndPos := optStartPos + estimateOptionsLength(field.Elements) + 1 // Approximate position
+					*tokens = append(*tokens, Token{
+						Line:          field.Position.Line - 1,
+						StartChar:     optEndPos,
+						Length:        1,
+						TokenType:     16, // operator
+						TokenModifier: 0,
+					})
+				}
 			}
 		}
 	}
+}
+
+// estimateOptionsLength estimates the length of enum options text
+func estimateOptionsLength(options []proto.Visitee) int {
+	length := 0
+	for i, optz := range options {
+		if opt, ok := optz.(*protobuf.Option); ok {
+			if i > 0 {
+				length += 2 // ", " separator
+			}
+			length += len(opt.Name)
+			if opt.Constant.Source != "" {
+				length += 1 + len(opt.Constant.Source) // "=" + value
+			}
+		}
+	}
+	return length
 }
 
 // processServices handles service declarations and their RPCs
@@ -396,7 +757,7 @@ func processServices(proto parser.Proto, tokens *[]Token) {
 						Line:          rpos.Line - 1,
 						StartChar:     reqPos,
 						Length:        reqTypeLength,
-						TokenType:     1, // type
+						TokenType:     determineTypeTokenType(rpc.ProtoRPC.RequestType, proto),
 						TokenModifier: 0,
 					})
 				}
@@ -411,13 +772,41 @@ func processServices(proto parser.Proto, tokens *[]Token) {
 						Line:          rpos.Line - 1,
 						StartChar:     rpos.Column + 20, // Rough estimate after "rpc Name (Request) returns ("
 						Length:        returnTypeLength,
-						TokenType:     1, // type
+						TokenType:     determineTypeTokenType(rpc.ProtoRPC.ReturnsType, proto),
 						TokenModifier: 0,
 					})
 				}
 			}
 		}
 	}
+}
+
+// determineTypeTokenType determines if a type is a built-in type, message, enum, or namespace
+func determineTypeTokenType(typeName string, proto parser.Proto) int {
+	if isBuiltInType(typeName) {
+		return 1 // type
+	}
+
+	// Remove any stream prefix if present
+	cleanTypeName := typeName
+	if strings.HasPrefix(cleanTypeName, "stream ") {
+		cleanTypeName = cleanTypeName[7:] // Remove "stream " prefix
+	}
+
+	// Check if this is a message or enum type
+	if _, ok := proto.GetMessageByName(cleanTypeName); ok {
+		return 2 // class
+	}
+	if _, ok := proto.GetEnumByName(cleanTypeName); ok {
+		return 3 // enum
+	}
+
+	// Check if this is a qualified name with a namespace
+	if strings.Contains(cleanTypeName, ".") {
+		return 0 // namespace
+	}
+
+	return 1 // Default to type
 }
 
 // encodeTokens converts absolute token positions to relative positions

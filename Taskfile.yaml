@@ -11,32 +11,13 @@ tasks:
     test:
         cmd: go test ./...
 
-    refresh-extension-go:
-        dir: code-extension
-        cmds:
-          - rm -rf out
-          - mkdir -p out
-          - cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" out/
-          - cd ../cmd/protolsp-wasm && GOOS=js GOARCH=wasm go build -o ../../code-extension/out/protolsp.wasm
-          - bun install
-
-    refresh-extension-tinygo:
-        dir: code-extension
-        cmds:
-          - rm -rf out
-          - mkdir -p out
-          - cp "$(tinygo env TINYGOROOT)/targets/wasm_exec.js" out/wasm_exec.tinygo.js
-          - cd ../cmd/protolsp-wasm && GOOS=js GOARCH=wasm tinygo build -o ../../code-extension/out/protolsp.wasm
-          - bun install
-
-
     refresh-extension-wasi:
         desc: Build WASI module
         cmds:
           - rm -rf out
           - mkdir -p out
-          - GOOS=wasip1 GOARCH=wasm go build -o ./code-extension/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
-          - cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" ./code-extension/out/wasm_exec.wasi.js
+          - GOOS=wasip1 GOARCH=wasm go build -o ./code-extension-wasi/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
+          - cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" ./code-extension-wasi/out/wasm_exec.wasi.js
           - bun install
 
     refresh-extension-wasi-tinygo:
@@ -44,20 +25,23 @@ tasks:
         cmds:
           - rm -rf out
           - mkdir -p out
-          - GOOS=wasip1 GOARCH=wasm tinygo build -o ./code-extension/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
-          - cp "$(tinygo env TINYGOROOT)/targets/wasm_exec.js" ./code-extension/out/wasm_exec.wasi.js
+          - GOOS=wasip1 GOARCH=wasm tinygo build -o ./code-extension-wasi/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
+          - cp "$(tinygo env TINYGOROOT)/targets/wasm_exec.js" ./code-extension-wasi/out/wasm_exec.wasi.js
           - bun install
 
-    package-extension:
-        dir: code-extension
-        cmds:
-          - task: refresh-extension-go
-          - bun run package
-          - mv ./protolsp-*.vsix ~/Downloads
-          - open https://marketplace.visualstudio.com/manage/publishers/walteh
+
 
     rebuild-extension:
         dir: code-extension
         cmds:
           - task: refresh-extension-wasi
           - bun run build
+
+
+    package-extension:
+        dir: code-extension
+        cmds:
+          - task: refresh-extension-wasi
+          - bun run package
+          - mv ./protolsp-*.vsix ~/Downloads
+          - open https://marketplace.visualstudio.com/manage/publishers/walteh

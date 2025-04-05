@@ -10,20 +10,12 @@ import (
 	"github.com/walteh/protobuf-language-server/proto/view"
 )
 
-// note about logging: the logging will go to the extenstion host process, so if we want to actually return logs to the extension,
-// we need to do some extra work
-// - like intercepting the logs and returning them to the extension in the response
-
 func main() {
 	config := &lsp.Options{
 		CompletionProvider: &defines.CompletionOptions{
 			TriggerCharacters: &[]string{"."},
 		},
 	}
-	// if *address != "" {
-	// 	config.Address = *address
-	// 	config.Network = "tcp"
-	// }
 
 	server := lsp.NewServer(config)
 
@@ -38,7 +30,4 @@ func main() {
 	server.OnHover(components.Hover)
 	server.OnDocumentRangeFormatting(components.FormatRange)
 	server.Run()
-
-	// Keep the program running
-	select {}
 }

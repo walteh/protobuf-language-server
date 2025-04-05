@@ -1,12 +1,11 @@
-
 version: 3
 tasks:
     generate:
         cmd: mockery
         generates:
-          - ./gen/mockery/*.go
+            - ./gen/mockery/*.go
         sources:
-          - ./**/*.go
+            - ./**/*.go
 
     test:
         cmd: go test ./...
@@ -14,34 +13,31 @@ tasks:
     refresh-extension-wasi:
         desc: Build WASI module
         cmds:
-          - rm -rf out
-          - mkdir -p out
-          - GOOS=wasip1 GOARCH=wasm go build -o ./code-extension-wasi/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
-          - cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" ./code-extension-wasi/out/wasm_exec.wasi.js
-          - bun install
+            - rm -rf out
+            - mkdir -p out
+            - GOOS=wasip1 GOARCH=wasm go build -o ./code-extension-wasi/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
+            - cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" ./code-extension-wasi/out/wasm_exec.wasi.js
+            - bun install
 
     refresh-extension-wasi-tinygo:
         desc: Build WASI module
         cmds:
-          - rm -rf out
-          - mkdir -p out
-          - GOOS=wasip1 GOARCH=wasm tinygo build -o ./code-extension-wasi/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
-          - cp "$(tinygo env TINYGOROOT)/targets/wasm_exec.js" ./code-extension-wasi/out/wasm_exec.wasi.js
-          - bun install
-
-
+            - rm -rf out
+            - mkdir -p out
+            - GOOS=wasip1 GOARCH=wasm tinygo build -o ./code-extension-wasi/out/protolsp.wasi.wasm ./cmd/protolsp-wasi
+            - cp "$(tinygo env TINYGOROOT)/targets/wasm_exec.js" ./code-extension-wasi/out/wasm_exec.wasi.js
+            - bun install
 
     rebuild-extension:
-        dir: code-extension
+        dir: code-extension-wasi
         cmds:
-          - task: refresh-extension-wasi
-          - bun run build
-
+            - task: refresh-extension-wasi
+            - bun run build
 
     package-extension:
-        dir: code-extension
+        dir: code-extension-wasi
         cmds:
-          - task: refresh-extension-wasi
-          - bun run package
-          - mv ./protolsp-*.vsix ~/Downloads
-          - open https://marketplace.visualstudio.com/manage/publishers/walteh
+            - task: refresh-extension-wasi
+            - bun run package
+            - mv ./protolsp-*.vsix ~/Downloads
+            - open https://marketplace.visualstudio.com/manage/publishers/walteh

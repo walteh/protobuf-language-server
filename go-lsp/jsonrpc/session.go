@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +32,6 @@ type Session struct {
 	executorLock sync.Mutex
 	writeLock    sync.Mutex
 	cancel       chan struct{}
-	wasi         bool
 }
 
 func newSession(id int, server *Server, conn ReaderWriter) *Session {
@@ -39,10 +39,6 @@ func newSession(id int, server *Server, conn ReaderWriter) *Session {
 	s.executors = make(map[interface{}]*executor)
 	s.cancel = make(chan struct{}, 1)
 	return s
-}
-
-func (s *Session) SetWasi(wasi bool) {
-	s.wasi = wasi
 }
 
 func (s *Session) Start() {
@@ -199,7 +195,7 @@ func (s *Session) cancelJob(id interface{}) {
 	s.removeExecutor(exec)
 }
 
-func (s *Session) execute(mtdInfo MethodInfo, req RequestMessage, args interface{}, wasi bool) {
+func (s *Session) execute(mtdInfo MethodInfo, req RequestMessage, args interface{}) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	ctx = context.WithValue(ctx, sessionKey, s)
@@ -227,10 +223,13 @@ func (s *Session) execute(mtdInfo MethodInfo, req RequestMessage, args interface
 		}
 	}
 
-	if !wasi {
-		go wrk()
-	} else {
+	if runtime.GOOS == "wasip1" && runtime.GOARCH == "wasm" {
+		// wasi supports goroutines, but currently (wasip1 go v1.24.2) it runs everything on a single thread
+		// normally stuff works alright, but in a stdio language server the main thread is blocked on waiting for input
+		// i have not really tested the repercussions of this, but it does indeed work (as in "not block") in vscode
 		wrk()
+	} else {
+		go wrk()
 	}
 }
 
@@ -246,7 +245,7 @@ func (s *Session) handlerRequest(req RequestMessage) error {
 		return ParseError
 	}
 	logs.Printf("execute request: [%v] [%s]\n", req.ID, req.Method)
-	s.execute(mtdInfo, req, reqArgs, s.wasi)
+	s.execute(mtdInfo, req, reqArgs)
 	return nil
 }
 

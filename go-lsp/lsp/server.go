@@ -21,10 +21,6 @@ func NewServer(opt *Options) *Server {
 	return s
 }
 
-func (s *Server) SetWasi(wasi bool) {
-	s.rpcServer.SetWasi(wasi)
-}
-
 func (s *Server) Run() {
 	mtds := s.GetMethods()
 	for _, m := range mtds {

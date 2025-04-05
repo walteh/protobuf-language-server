@@ -19,13 +19,11 @@ func main() {
 
 	server := lsp.NewServer(config)
 
-	server.SetWasi(true)
-
 	logs.Init(nil)
 	view.Init(server)
 	server.OnDocumentSymbolWithSliceDocumentSymbol(components.ProvideDocumentSymbol)
 	server.OnDefinition(components.JumpDefine)
-	server.OnDocumentFormatting(components.Format)
+	server.OnDocumentFormatting(components.FormatWithRetab)
 	server.OnCompletion(components.Completion)
 	server.OnHover(components.Hover)
 	server.OnDocumentRangeFormatting(components.FormatRange)

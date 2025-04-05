@@ -5,16 +5,12 @@
 			"path": "."
 		},
 		{
-			"name": "code-extension [ts]",
-			"path": "code-extension"
+			"name": "code-extension-wasi [ts]",
+			"path": "code-extension-wasi"
 		},
 		{
-			"name": "tools [go]",
-			"path": "tools"
-		},
-		{
-			"name": "examples [go]",
-			"path": "examples"
+			"name": "code-extension-exec [ts]",
+			"path": "code-extension-exec"
 		}
 	],
 	"extensions": {
